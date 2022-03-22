@@ -64,9 +64,11 @@ struct evl_heap_range {
 };
 
 struct evl_heap {
+	/* base address of the page array.*/
 	void *membase;
 	struct rb_root addr_tree;
 	struct rb_root size_tree;
+	/*each page of evl heap has a entry to manage the page.*/
 	struct evl_heap_pgentry *pagemap;
 	size_t usable_size;
 	size_t used_size;

@@ -404,6 +404,19 @@ static void *add_free_range(struct evl_heap *heap,
 	return pagenr_to_addr(heap, pg);
 }
 
+/**
+ * evl_init_heap() - init the evl heap.
+* @evl_heap: A pointer to the evl heap.
+* @membase: A pointer to the memory space controling by the evl heap.
+* @size: The size of the controled memory.
+*
+* This function init the first extent memory of a evl heap. Each evl
+* heap should use this function.
+*
+* Return: 0 if the init successes.
+*	  -EINVAL if the size is wrong.
+*	  -ENOMEM if the memory is not enough.
+*/
 int evl_init_heap(struct evl_heap *heap, void *membase, size_t size)
 {
 	int n, nrpages;
@@ -419,7 +432,9 @@ int evl_init_heap(struct evl_heap *heap, void *membase, size_t size)
 
 	raw_spin_lock_init(&heap->lock);
 
+	/*nrpgaes is the number of the evl heap pages, each page haves 512bytes.*/
 	nrpages = size >> EVL_HEAP_PAGE_SHIFT;
+	/*pagemap is a pointer to an array of struct evl_heap_pgentry.*/
 	heap->pagemap = kzalloc(sizeof(struct evl_heap_pgentry) * nrpages,
 				GFP_KERNEL);
 	if (heap->pagemap == NULL)
