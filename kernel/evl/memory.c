@@ -41,9 +41,9 @@ enum evl_heap_pgtype {
 };
 
 static inline u32 __always_inline
-gen_block_mask(int log2size)
-{
-	return -1U >> (32 - (EVL_HEAP_PAGE_SIZE >> log2size));
+gen_block_mask(int log2size)//log2size is 4-8 for small size, larger than 8 for larger size. 
+{//log2size is 8: -1U >>（32-512/2^8）= -1U >>30 = 11 ;...; 5: -1U >>（32-512/2^5）= -1U>>16 = 16 1; 4: -1U >>（32-512/2^4）= -1U>>0 = -1U; 
+	return -1U >> (32 - (EVL_HEAP_PAGE_SIZE >> log2size));//-1U>>(32-(512>>log2size))
 }
 
 static inline  __always_inline
@@ -276,7 +276,7 @@ static void release_page_range(struct evl_heap *heap,
 		size >> EVL_HEAP_PAGE_SHIFT, page_free);
 }
 
-static void add_page_front(struct evl_heap *heap,
+static void add_page_front(struct evl_heap *heap,//
 			int pg, int log2size)
 {
 	struct evl_heap_pgentry *new, *head, *next;
@@ -284,19 +284,19 @@ static void add_page_front(struct evl_heap *heap,
 
 	/* Insert page at front of the per-bucket page list. */
 
-	ilog = log2size - EVL_HEAP_MIN_LOG2;
-	new = &heap->pagemap[pg];
-	if (heap->buckets[ilog] == -1U) {
-		heap->buckets[ilog] = pg;
-		new->prev = new->next = pg;
-	} else {
-		head = &heap->pagemap[heap->buckets[ilog]];
+	ilog = log2size - EVL_HEAP_MIN_LOG2;// the bucket index
+	new = &heap->pagemap[pg];// pg is the reversed page number of the heap. new is the pagemap of that page
+	if (heap->buckets[ilog] == -1U) {// if the bucket content is zero, then the bucket is assigned the first time
+		heap->buckets[ilog] = pg;// the current page number in the front
+		new->prev = new->next = pg;//if the reversed page in a bucket, the pages are linked 
+	} else {// else the buckect has some values 
+		head = &heap->pagemap[heap->buckets[ilog]];//the head is the current pagemap of this size in the bucket
 		new->prev = heap->buckets[ilog];
-		new->next = head->next;
+		new->next = head->next;//new prev next; link the pages of the same size, from tail to head, head to the tail
 		next = &heap->pagemap[new->next];
-		next->prev = pg;
-		head->next = pg;
-		heap->buckets[ilog] = pg;
+		next->prev = pg;//next prev
+		head->next = pg;//head next
+		heap->buckets[ilog] = pg;// the current page number in the front
 	}
 }
 
@@ -364,8 +364,8 @@ static void *add_free_range(struct evl_heap *heap,
 {
 	int pg;
 
-	pg = reserve_page_range(heap, ALIGN(bsize, EVL_HEAP_PAGE_SIZE));
-	if (pg < 0)
+	pg = reserve_page_range(heap, ALIGN(bsize, EVL_HEAP_PAGE_SIZE));//256 -> 512
+	if (pg < 0)// pg is the page number of the heap. each page array has the size of 512
 		return NULL;
 
 	/*
@@ -379,21 +379,21 @@ static void *add_free_range(struct evl_heap *heap,
 	 * pages: set entry.type to page_list, indicating the start of
 	 * the page range, and entry.bsize to the overall block size.
 	 */
-	if (log2size) {
+	if (log2size) {//for small page <2^9. log2size <= 8
 		heap->pagemap[pg].type = log2size;
 		/*
 		 * Mark the first object slot (#0) as busy, along with
 		 * the leftmost bits we won't use for this log2 size.
 		 */
-		heap->pagemap[pg].map = ~gen_block_mask(log2size) | 1;
+		heap->pagemap[pg].map = ~gen_block_mask(log2size) | 1;// log2size
 		/*
 		 * Insert the new page at front of the per-bucket page
 		 * list, enforcing the assumption that pages with free
-		 * space live close to the head of this list.
+		 * space live close to the head of this list.//the head of this list means the page bucket content points
 		 */
-		add_page_front(heap, pg, log2size);
-	} else {
-		heap->pagemap[pg].type = page_list;
+		add_page_front(heap, pg, log2size);// pg is the index of the heap array;
+	} else {//big page >=2^9
+		heap->pagemap[pg].type = page_list;// 
 		heap->pagemap[pg].bsize = (u32)bsize;
 		mark_pages(heap, pg + 1,
 			(bsize >> EVL_HEAP_PAGE_SHIFT) - 1, page_cont);
@@ -401,7 +401,7 @@ static void *add_free_range(struct evl_heap *heap,
 
 	heap->used_size += bsize;
 
-	return pagenr_to_addr(heap, pg);
+	return pagenr_to_addr(heap, pg);//page number to address
 }
 
 int evl_init_heap(struct evl_heap *heap, void *membase, size_t size)
@@ -457,23 +457,23 @@ void *evl_alloc_chunk(struct evl_heap *heap, size_t size)
 {
 	int log2size, ilog, pg, b = -1;
 	unsigned long flags;
-	size_t bsize;
+	size_t bsize;//bucket size
 	void *block;
 
 	if (size == 0)
 		return NULL;
 
-	if (size < EVL_HEAP_MIN_ALIGN) {
-		bsize = size = EVL_HEAP_MIN_ALIGN;
-		log2size = EVL_HEAP_MIN_LOG2;
-	} else {
-		log2size = ilog2(size);
-		if (log2size < EVL_HEAP_PAGE_SHIFT) {
-			if (size & (size - 1))
+	if (size < EVL_HEAP_MIN_ALIGN) {//<2^4
+		bsize = size = EVL_HEAP_MIN_ALIGN;//2^4
+		log2size = EVL_HEAP_MIN_LOG2;//4
+	} else {//>2^4
+		log2size = ilog2(size);//down int size
+		if (log2size < EVL_HEAP_PAGE_SHIFT) {//9 2^4-2^8
+			if (size & (size - 1))// up to the biger int size
 				log2size++;
 			bsize = 1 << log2size;
-		} else
-			bsize = ALIGN(size, EVL_HEAP_PAGE_SIZE);
+		} else//>2^9
+			bsize = ALIGN(size, EVL_HEAP_PAGE_SIZE);//512 up to a int times to 512
 	}
 
 	/*
@@ -486,26 +486,27 @@ void *evl_alloc_chunk(struct evl_heap *heap, size_t size)
 	 * always assume that either the heading page has some room
 	 * available, or no room is available from any page linked to
 	 * this list, in which case we should immediately add a fresh
-	 * page.
+	 * page.// ??????????? this p not 
 	 */
 	raw_spin_lock_irqsave(&heap->lock, flags);
 
-	if (bsize >= EVL_HEAP_PAGE_SIZE)
+	if (bsize >= EVL_HEAP_PAGE_SIZE)//big size page
 		/* Add a range of contiguous free pages. */
 		block = add_free_range(heap, bsize, 0);
-	else {
-		ilog = log2size - EVL_HEAP_MIN_LOG2;
-		EVL_WARN_ON(MEMORY, ilog < 0 || ilog >= EVL_HEAP_MAX_BUCKETS);
-		pg = heap->buckets[ilog];
+	else {//same size page
+		ilog = log2size - EVL_HEAP_MIN_LOG2;//4 calculate the index of the bucket list
+		EVL_WARN_ON(MEMORY, ilog < 0 || ilog >= EVL_HEAP_MAX_BUCKETS);//5
+		pg = heap->buckets[ilog];//the number saved in the bucket . in the begining this is -1U
 		/*
 		 * Find a block in the heading page if any. If there
 		 * is none, there won't be any down the list: add a
 		 * new page right away.
 		 */
-		if (pg < 0 || heap->pagemap[pg].map == -1U)
-			block = add_free_range(heap, bsize, log2size);
-		else {
-			b = ffs(~heap->pagemap[pg].map) - 1;
+		if (pg < 0 || heap->pagemap[pg].map == -1U)// if the routine runs the first time go into this condition;
+							   // another condition is that the bucket is used up
+			block = add_free_range(heap, bsize, log2size);//return the block address
+		else {// the bucket still has free space
+			b = ffs(~heap->pagemap[pg].map) - 1;//ffs means finding the first bit
 			/*
 			 * Got one block from the heading per-bucket
 			 * page, tag it as busy in the per-page

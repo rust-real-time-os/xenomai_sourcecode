@@ -29,16 +29,16 @@
 /* Maximum size of a heap (4Gb - PAGE_SIZE). */
 #define EVL_HEAP_MAX_HEAPSZ	(4294967295U - PAGE_SIZE + 1)
 /* Bits we need for encoding a page # */
-#define EVL_HEAP_PGENT_BITS      (32 - EVL_HEAP_PAGE_SHIFT)
+#define EVL_HEAP_PGENT_BITS      (32 - EVL_HEAP_PAGE_SHIFT)//32-9
 /* Each page is represented by a page map entry. */
 #define EVL_HEAP_PGMAP_BYTES	sizeof(struct evl_heap_pgentry)
 
 struct evl_heap_pgentry {
 	/* Linkage in bucket list. */
-	unsigned int prev : EVL_HEAP_PGENT_BITS;
+	unsigned int prev : EVL_HEAP_PGENT_BITS;//pgent
 	unsigned int next : EVL_HEAP_PGENT_BITS;
 	/*  page_list or log2. */
-	unsigned int type : 6;
+	unsigned int type : 6;// in the small page condition, this gives the bucket size. Otherwise, it is the start add.
 	/*
 	 * We hold either a spatial map of busy blocks within the page
 	 * for bucketed memory (up to 32 blocks per page), or the
@@ -46,8 +46,8 @@ struct evl_heap_pgentry {
 	 * page_list.
 	 */
 	union {
-		u32 map;
-		u32 bsize;
+		u32 map;// map is for the small page. It is used by the bucketed memory to identify the used blocks
+		u32 bsize;//bsize is for the big page. This is the over-all size of the big page.
 	};
 };
 
