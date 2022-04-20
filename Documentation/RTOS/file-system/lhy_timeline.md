@@ -1,0 +1,64 @@
+﻿## init模块
+
+1. init部分
+    - cpumask
+        - 0.5天
+    - init_core
+        - enable_oob_stage
+            - 1天
+        - evl_init_memory
+            - 2天
+        - evl_early_init_factories
+            - 3天
+        - evl_clock_init
+            - 5天
+        - evl_init_sched
+            - 1天
+        - evl_enable_tick
+            - 3天
+        - dovetail_start
+            - 0.5天
+        - evl_late_init_factories
+            - 0天
+            - 这个模块的函数是之前写过的
+        - evl_net_init
+            - 网络模块可以先省略
+
+## 文件系统部分
+
+1. facotry.c
+   - evl_init_element
+   - evl_init_user_element
+   - evl_destroy_element
+     - 1天
+   - evl_get_element
+   - evl_put_element
+     - 1天
+   - evl_open_element
+   - evl_release_element
+   - evl_create_core_element_device
+   - evl_remove_element_device
+   - evl_index_factory_element
+   - evl_unindex_factory_element
+   - evl_may_access_factory
+   - 下列内容是初始化部分的，已经在初始化部分完成
+     - evl_create_factory
+     - evl_delete_factory
+     - evl_early_init_factories
+     - evl_early_cleanup_factories
+     - evl_late_init_factories
+     - evl_late_cleanup_factories
+2. proxy.c
+   - proxy_oob_write
+   - proxy_oob_read
+   - proxy_oob_poll
+   - proxy_write
+   - proxy_read
+   - proxy_poll
+   - proxy_mmap
+3. file.c
+   - evl_open_file
+   - evl_release_file
+   - evl_get_file
+   - evl_get_fileref
+   - evl_put_file
