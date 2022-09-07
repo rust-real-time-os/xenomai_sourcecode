@@ -87,22 +87,24 @@ void __init evl_warn_init(const char *fn, int level, int status)
 void fn1(void *arg){
 	while(1){
 		pr_info("fn1:hello");
-		schedule_timeout_interruptible(1);
+		evl_sleep(10000000);
 	}
 }
 
 void fn2(void *arg){
 	while(1){
 		pr_info("fn2:world");
-		// sleep(1);
+		evl_sleep(10000000);
 	}
 }
 
 void test_thread(void){
 	pr_info("test_thread: in");
-	struct evl_kthread *kthread  = (struct evl_kthread*)kmalloc(sizeof(struct evl_kthread),GFP_USER);
-	int args = 1;
-	evl_run_kthread(kthread,fn1,(void *)(&args),0,0,"fm1");
+	struct evl_kthread *kthread  = (struct evl_kthread*)kzalloc(sizeof(struct evl_kthread),GFP_KERNEL);
+	evl_run_kthread(kthread,fn1,NULL,0,EVL_CLONE_PUBLIC,"fm1");
+
+	// struct evl_kthread *kthread2  = (struct evl_kthread*)kzalloc(sizeof(struct evl_kthread),GFP_KERNEL);
+	// evl_run_kthread(kthread2,fn2,NULL,0,EVL_CLONE_PUBLIC,"fm2");
 }
 static __init int init_core(void)
 {
