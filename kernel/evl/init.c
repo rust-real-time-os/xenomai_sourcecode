@@ -16,6 +16,9 @@
 #include <evl/factory.h>
 #include <evl/control.h>
 #include <evl/net.h>
+#include <evl/thread.h>
+#include <linux/timer.h>
+#include <linux/slab.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/evl.h>
 
@@ -79,8 +82,28 @@ void __init evl_warn_init(const char *fn, int level, int status)
 	printk(EVL_ERR "FAILED: %s => [%d]\n", fn, status);
 }
 
-#endif
+#endif 
 
+void fn1(void *arg){
+	while(1){
+		pr_info("fn1:hello");
+		schedule_timeout_interruptible(1);
+	}
+}
+
+void fn2(void *arg){
+	while(1){
+		pr_info("fn2:world");
+		// sleep(1);
+	}
+}
+
+void test_thread(void){
+	pr_info("test_thread: in");
+	struct evl_kthread *kthread  = (struct evl_kthread*)kmalloc(sizeof(struct evl_kthread),GFP_USER);
+	int args = 1;
+	evl_run_kthread(kthread,fn1,(void *)(&args),0,0,"fm1");
+}
 static __init int init_core(void)
 {
 	int ret;
@@ -134,7 +157,6 @@ static __init int init_core(void)
 	ret = evl_net_init();
 	if (ret)
 		goto cleanup_late_factories;
-
 	return 0;
 
 cleanup_late_factories:
@@ -194,7 +216,7 @@ static int __init evl_init(void)
 		boot_debug_notice,
 		boot_trace_notice,
 		boot_state_notice);
-
+	test_thread();
 	return 0;
 fail:
 	set_evl_state(EVL_STATE_DISABLED);
